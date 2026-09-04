@@ -2,7 +2,8 @@
 
 namespace Tests\Feature;
 
-use App\Models\Client;
+use App\Models\Account;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -10,9 +11,13 @@ class TransactionApiTest extends TestCase
 {
     use RefreshDatabase;
 
-    private function createAccount(string $cash = '100.00')
+    private function createAccount(string $cash = '100.00'): Account
     {
-        $client = Client::create([
+        $user = User::factory()->create([
+            'name' => 'Ana',
+        ]);
+
+        $client = $user->client()->create([
             'name' => 'Ana',
         ]);
 

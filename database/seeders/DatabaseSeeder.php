@@ -7,6 +7,7 @@ use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use App\Services\TransactionService;
 use App\Models\Client;
+use Illuminate\Support\Facades\Hash;
 
 class DatabaseSeeder extends Seeder
 {
@@ -19,7 +20,15 @@ class DatabaseSeeder extends Seeder
     {
         $transactionService = app(TransactionService::class);
 
+        // Ana
+        $anaUser = User::create([
+            'name' => 'Ana',
+            'email' => 'ana@example.com',
+            'password' => Hash::make('password'),
+        ]);
+
         $ana = Client::create([
+            'user_id' => $anaUser->id,
             'name' => 'Ana',
         ]);
 
@@ -35,7 +44,15 @@ class DatabaseSeeder extends Seeder
         $transactionService->sell($anaAccount, 'AAPL', 3, '120.00');
 
 
+        // Mark
+        $markUser = User::create([
+            'name' => 'Mark',
+            'email' => 'mark@example.com',
+            'password' => Hash::make('password'),
+        ]);
+
         $mark = Client::create([
+            'user_id' => $markUser->id,
             'name' => 'Mark',
         ]);
 

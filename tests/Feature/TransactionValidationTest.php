@@ -2,7 +2,8 @@
 
 namespace Tests\Feature;
 
-use App\Models\Client;
+use App\Models\Account;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -10,9 +11,13 @@ class TransactionValidationTest extends TestCase
 {
     use RefreshDatabase;
 
-    private function createAccount()
+    private function createAccount(): Account
     {
-        $client = Client::create([
+        $user = User::factory()->create([
+            'name' => 'Ana',
+        ]);
+
+        $client = $user->client()->create([
             'name' => 'Ana',
         ]);
 

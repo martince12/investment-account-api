@@ -2,7 +2,8 @@
 
 namespace Tests\Feature;
 
-use App\Models\Client;
+use App\Models\Account;
+use App\Models\User;
 use App\Services\TransactionService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -11,18 +12,32 @@ class TransactionServiceTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_deposit_updates_cash_and_total_balance(): void
-    {
-        $client = Client::create([
-            'name' => 'Ana',
+    private function createAccount(
+        string $name = 'Ana',
+        string $cash = '0.00',
+        string $holdings = '0.00',
+        string $total = '0.00',
+        string $currency = 'EUR'
+    ): Account {
+        $user = User::factory()->create([
+            'name' => $name,
         ]);
 
-        $account = $client->account()->create([
-            'currency' => 'EUR',
-            'cash_balance' => '0.00',
-            'holdings_balance' => '0.00',
-            'total_balance' => '0.00',
+        $client = $user->client()->create([
+            'name' => $name,
         ]);
+
+        return $client->account()->create([
+            'currency' => $currency,
+            'cash_balance' => $cash,
+            'holdings_balance' => $holdings,
+            'total_balance' => $total,
+        ]);
+    }
+
+    public function test_deposit_updates_cash_and_total_balance(): void
+    {
+        $account = $this->createAccount();
 
         $service = app(TransactionService::class);
 
@@ -46,16 +61,12 @@ class TransactionServiceTest extends TestCase
 
     public function test_withdrawal_updates_cash_and_total_balance(): void
     {
-        $client = Client::create([
-            'name' => 'Ana',
-        ]);
-
-        $account = $client->account()->create([
-            'currency' => 'EUR',
-            'cash_balance' => '1000.00',
-            'holdings_balance' => '0.00',
-            'total_balance' => '1000.00',
-        ]);
+        $account = $this->createAccount(
+            'Ana',
+            '1000.00',
+            '0.00',
+            '1000.00'
+        );
 
         $service = app(TransactionService::class);
 
@@ -71,16 +82,12 @@ class TransactionServiceTest extends TestCase
 
     public function test_withdrawal_fails_when_cash_is_insufficient(): void
     {
-        $client = Client::create([
-            'name' => 'Ana',
-        ]);
-
-        $account = $client->account()->create([
-            'currency' => 'EUR',
-            'cash_balance' => '200.00',
-            'holdings_balance' => '0.00',
-            'total_balance' => '200.00',
-        ]);
+        $account = $this->createAccount(
+            'Ana',
+            '200.00',
+            '0.00',
+            '200.00'
+        );
 
         $service = app(TransactionService::class);
 
@@ -104,14 +111,12 @@ class TransactionServiceTest extends TestCase
 
     public function test_buy_updates_balances_and_holding(): void
     {
-        $client = Client::create(['name' => 'Ana']);
-
-        $account = $client->account()->create([
-            'currency' => 'EUR',
-            'cash_balance' => '1000.00',
-            'holdings_balance' => '0.00',
-            'total_balance' => '1000.00',
-        ]);
+        $account = $this->createAccount(
+            'Ana',
+            '1000.00',
+            '0.00',
+            '1000.00'
+        );
 
         $service = app(TransactionService::class);
 
@@ -142,14 +147,12 @@ class TransactionServiceTest extends TestCase
 
     public function test_buy_fails_when_cash_is_insufficient(): void
     {
-        $client = Client::create(['name' => 'Ana']);
-
-        $account = $client->account()->create([
-            'currency' => 'EUR',
-            'cash_balance' => '200.00',
-            'holdings_balance' => '0.00',
-            'total_balance' => '200.00',
-        ]);
+        $account = $this->createAccount(
+            'Ana',
+            '200.00',
+            '0.00',
+            '200.00'
+        );
 
         $service = app(TransactionService::class);
 
@@ -176,14 +179,12 @@ class TransactionServiceTest extends TestCase
 
     public function test_sell_updates_balances_and_holding(): void
     {
-        $client = Client::create(['name' => 'Ana']);
-
-        $account = $client->account()->create([
-            'currency' => 'EUR',
-            'cash_balance' => '500.00',
-            'holdings_balance' => '500.00',
-            'total_balance' => '1000.00',
-        ]);
+        $account = $this->createAccount(
+            'Ana',
+            '500.00',
+            '500.00',
+            '1000.00'
+        );
 
         $account->holdings()->create([
             'ticker' => 'AAPL',
@@ -221,14 +222,12 @@ class TransactionServiceTest extends TestCase
 
     public function test_sell_fails_when_quantity_is_insufficient(): void
     {
-        $client = Client::create(['name' => 'Ana']);
-
-        $account = $client->account()->create([
-            'currency' => 'EUR',
-            'cash_balance' => '500.00',
-            'holdings_balance' => '500.00',
-            'total_balance' => '1000.00',
-        ]);
+        $account = $this->createAccount(
+            'Ana',
+            '500.00',
+            '500.00',
+            '1000.00'
+        );
 
         $account->holdings()->create([
             'ticker' => 'AAPL',
@@ -267,14 +266,12 @@ class TransactionServiceTest extends TestCase
 
     public function test_full_sell_removes_holding_but_keeps_transaction_history(): void
     {
-        $client = Client::create(['name' => 'Ana']);
-
-        $account = $client->account()->create([
-            'currency' => 'EUR',
-            'cash_balance' => '500.00',
-            'holdings_balance' => '500.00',
-            'total_balance' => '1000.00',
-        ]);
+        $account = $this->createAccount(
+            'Ana',
+            '500.00',
+            '500.00',
+            '1000.00'
+        );
 
         $account->holdings()->create([
             'ticker' => 'AAPL',
@@ -307,23 +304,21 @@ class TransactionServiceTest extends TestCase
 
     public function test_transactions_are_isolated_between_accounts(): void
     {
-        $ana = Client::create(['name' => 'Ana']);
+        $anaAccount = $this->createAccount(
+            'Ana',
+            '1000.00',
+            '0.00',
+            '1000.00',
+            'EUR'
+        );
 
-        $anaAccount = $ana->account()->create([
-            'currency' => 'EUR',
-            'cash_balance' => '1000.00',
-            'holdings_balance' => '0.00',
-            'total_balance' => '1000.00',
-        ]);
-
-        $mark = Client::create(['name' => 'Mark']);
-
-        $markAccount = $mark->account()->create([
-            'currency' => 'USD',
-            'cash_balance' => '500.00',
-            'holdings_balance' => '0.00',
-            'total_balance' => '500.00',
-        ]);
+        $markAccount = $this->createAccount(
+            'Mark',
+            '500.00',
+            '0.00',
+            '500.00',
+            'USD'
+        );
 
         $service = app(TransactionService::class);
 

@@ -13,6 +13,12 @@ return new class extends Migration
     {
         Schema::create('clients', function (Blueprint $table) {
             $table->id();
+
+            $table->foreignId('user_id')
+                ->unique()
+                ->constrained()
+                ->restrictOnDelete();
+
             $table->string('name')->unique();
             $table->timestamps();
         });
