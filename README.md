@@ -1,61 +1,103 @@
+
 # Investment Account API
 
-Laravel REST API for managing investment client accounts, cash movements, security transactions, and current portfolio holdings.
+A Laravel application for managing client investment accounts, cash balances, security holdings, and immutable account transactions.
 
-The application keeps both:
+The project was developed as a practical Software Engineering Internship assignment.
 
-* the **current account state** for fast access to balances and holdings;
-* an **immutable transaction history** containing every account movement.
+The core of the application is a Laravel backend that enforces financial business rules, validation, account isolation, and atomic transaction processing.
+
+An optional Blade-based frontend demo is also included on this branch, providing authentication and a simple user interface for interacting with an investment account.
+
+---
 
 ## Features
 
-* Create and retrieve clients
-* Exactly one account per client
-* Single account currency
-* Deposit cash
-* Withdraw cash
-* Buy securities
-* Sell securities
-* Track current cash balance
-* Track current holdings balance
-* Track total account balance
-* Track holdings by ticker and quantity
-* Immutable transaction history
-* Input validation
-* Protection against insufficient cash
-* Protection against overselling
-* Atomic account updates
-* Automated tests
-* Sample seeded data
+### Backend
+
+- Client and investment account management
+- One account per client
+- Single account currency
+- Cash balance tracking
+- Security holdings tracking
+- Immutable transaction history
+- Deposit transactions
+- Withdrawal transactions
+- Security purchases
+- Security sales
+- Validation of transaction input
+- Prevention of negative cash balances
+- Prevention of over-withdrawal
+- Prevention of over-selling
+- Account isolation between clients
+- Atomic financial operations
+- Database row locking for balance-changing operations
+- Automated tests for main business rules
+- Seeded sample data
+- REST API endpoints
+
+### Optional Frontend Demo
+
+The frontend demo is implemented using Laravel Blade and session authentication.
+
+It includes:
+
+- user login and logout;
+- authenticated account dashboard;
+- total account balance;
+- available cash balance;
+- holdings balance;
+- current portfolio holdings;
+- deposit form;
+- withdrawal form;
+- security purchase form;
+- security sale form;
+- transaction history;
+- validation and business-rule error messages.
+
+The frontend uses the same validation and `TransactionService` business logic as the API rather than duplicating the financial rules.
+
+---
+
+## Technology
+
+- PHP
+- Laravel
+- Blade
+- SQLite
+- Laravel session authentication
+- Vite
+- BCMath
+- PHPUnit / Pest
 
 ---
 
 ## Requirements
 
-Make sure the following are installed locally:
+Make sure the following are installed:
 
-* PHP
-* Composer
-* SQLite
-* PHP BCMath extension
+- PHP
+- Composer
+- PHP BCMath extension
+- Node.js and npm
 
-Verify BCMath:
-
-```bash
-php -m
-```
-
-`bcmath` should appear in the list of enabled extensions.
+SQLite is used by default.
 
 ---
 
-## Local Setup
+## Installation
 
 Clone the repository:
 
 ```bash
 git clone https://github.com/martince12/investment-account-api.git
 cd investment-account-api
+````
+
+For the optional frontend demo:
+
+```bash
+git checkout feature/frontend-demo
 ```
 
 Install PHP dependencies:
@@ -70,7 +112,7 @@ Create the environment file:
 cp .env.example .env
 ```
 
-On Windows PowerShell:
+On Windows PowerShell, you can use:
 
 ```powershell
 Copy-Item .env.example .env
@@ -82,421 +124,405 @@ Generate the application key:
 php artisan key:generate
 ```
 
-Create the database tables and sample data:
+Create and seed the database:
 
 ```bash
 php artisan migrate:fresh --seed
 ```
 
-Start the application:
+Install frontend dependencies:
+
+```bash
+npm install
+```
+
+Start Vite:
+
+```bash
+npm run dev
+```
+
+Start the Laravel application:
 
 ```bash
 php artisan serve
 ```
 
-The API will normally be available at:
+Then open:
 
 ```text
-http://127.0.0.1:8000/api
+http://127.0.0.1:8000
 ```
+
+Guests are redirected to the login page.
 
 ---
 
-## Running Tests
+## Demo Users
 
-Run the complete automated test suite:
+The database seeder creates two users for testing the frontend.
 
-```bash
-php artisan test
+### Ana
+
+```text
+Email: ana@example.com
+Password: password
 ```
 
-The tests cover:
+### Mark
 
-* successful deposits;
-* successful withdrawals;
-* withdrawal with insufficient cash;
-* successful buys;
-* buy with insufficient cash;
-* successful sells;
-* selling more units than owned;
-* complete sale of a holding;
-* preservation of state after rejected operations;
-* transaction input validation;
-* invalid transaction types;
-* zero and negative amounts;
-* invalid quantities and prices;
-* required security transaction fields;
-* clear API error responses.
+```text
+Email: mark@example.com
+Password: password
+```
+
+Each authenticated user can access only their own investment account.
 
 ---
 
-# API
+## Frontend Flow
 
-## Clients
+After login, the user is redirected to the account dashboard.
 
-### List Clients
+The dashboard displays:
 
-```http
-GET /api/clients
-```
+* total balance;
+* available cash;
+* holdings value;
+* current securities;
+* deposit functionality;
+* withdrawal functionality;
+* buy functionality.
 
-### Create Client
+Each current holding also has a **Sell** action that opens a dedicated sale form.
 
-```http
-POST /api/clients
-Content-Type: application/json
-```
+The transaction history page displays:
 
-Example:
+* transaction date;
+* transaction type;
+* amount;
+* ticker;
+* quantity;
+* transaction price.
 
-```json
-{
-    "name": "Ana",
-    "currency": "EUR"
-}
-```
-
-Creating a client also creates the client's account with zero balances.
-
-### Get Client
-
-```http
-GET /api/clients/{client}
-```
+Deposit and withdrawal transactions do not contain security-specific information.
 
 ---
 
-# Account
+## Transaction Types
 
-## Get Account Dashboard
+The application supports four transaction types:
 
-```http
-GET /api/accounts/{account}
+```text
+deposit
+withdrawal
+buy
+sell
 ```
 
-Example response:
+### Deposit
 
-```json
-{
-    "id": 1,
-    "client": {
-        "id": 1,
-        "name": "Ana"
-    },
-    "currency": "EUR",
-    "total_balance": "1100.00",
-    "cash_balance": "860.00",
-    "holdings_balance": "240.00",
-    "holdings": [
-        {
-            "ticker": "AAPL",
-            "quantity": 2,
-            "current_price": "120.00",
-            "current_value": "240.00"
-        }
-    ]
-}
-```
+Adds cash to the account.
 
----
-
-# Transactions
-
-## Transaction History
-
-```http
-GET /api/accounts/{account}/transactions
-```
-
-Returns the immutable transaction history for the selected account.
-
-BUY and SELL transactions also contain their security-specific details.
-
----
-
-## Deposit
-
-```http
-POST /api/accounts/{account}/transactions
-Content-Type: application/json
-```
+Required input:
 
 ```json
 {
     "type": "deposit",
-    "amount": "1000.00"
+    "amount": 1000
 }
 ```
 
----
+### Withdrawal
 
-## Withdrawal
+Removes cash from the account.
+
+Required input:
 
 ```json
 {
     "type": "withdrawal",
-    "amount": "200.00"
+    "amount": 200
 }
 ```
 
-A withdrawal is rejected when the requested amount exceeds the account's available cash.
+A withdrawal is rejected if the account does not contain enough available cash.
 
-Example error:
+### Buy
 
-```json
-{
-    "message": "Insufficient cash balance."
-}
-```
+Purchases a security.
 
----
-
-## Buy Security
+Required input:
 
 ```json
 {
     "type": "buy",
     "ticker": "AAPL",
     "quantity": 5,
-    "price": "100.00"
+    "price": 100
 }
 ```
 
-The transaction amount is calculated by the backend:
+The transaction amount is calculated by the server:
 
 ```text
-amount = quantity × price
+quantity × price
 ```
 
-The client therefore does not provide the transaction amount for BUY or SELL operations.
+A purchase is rejected if the account does not contain enough available cash.
 
-A BUY is rejected when there is insufficient available cash.
+### Sell
 
----
+Sells an owned security.
 
-## Sell Security
+Required input:
 
 ```json
 {
     "type": "sell",
     "ticker": "AAPL",
     "quantity": 3,
-    "price": "120.00"
+    "price": 120
 }
 ```
 
-Sale proceeds are calculated as:
+Sale proceeds are calculated by the server:
 
 ```text
-proceeds = quantity × price
+quantity × price
 ```
 
-A SELL is rejected when the account does not own enough units of the requested instrument.
-
-Example error:
-
-```json
-{
-    "message": "Insufficient holdings quantity."
-}
-```
-
-If all units of a security are sold, the current Holding record is removed. The BUY and SELL transaction history remains unchanged.
+A sale is rejected if the requested quantity is greater than the quantity currently owned.
 
 ---
 
-# Business Rules
+## REST API
 
-## Cash
+### Clients
 
-Cash may never become negative.
+List clients:
 
-The following operations consume available cash:
+```http
+GET /api/clients
+```
 
-* Withdrawal
-* Buy
+Create a client:
 
-A transaction that would make the cash balance negative is rejected.
+```http
+POST /api/clients
+```
+
+View a client:
+
+```http
+GET /api/clients/{client}
+```
+
+### Accounts
+
+View current account state:
+
+```http
+GET /api/accounts/{account}
+```
+
+### Transactions
+
+View transaction history:
+
+```http
+GET /api/accounts/{account}/transactions
+```
+
+Create a transaction:
+
+```http
+POST /api/accounts/{account}/transactions
+```
 
 ---
 
-## Holdings
+## Example Account Flow
 
-An account cannot sell more units of an instrument than it currently owns.
+Example for Ana:
 
-Holdings are uniquely identified by:
+### 1. Deposit 1000 EUR
 
 ```text
-account + ticker
+Cash: 1000 EUR
 ```
 
-For example, an account has one current `AAPL` Holding containing its current AAPL quantity.
+### 2. Buy 5 AAPL at 100 EUR
+
+```text
+Cost: 500 EUR
+
+Cash: 500 EUR
+AAPL: 5
+```
+
+### 3. Attempt to buy securities costing 700 EUR
+
+The transaction is rejected because only 500 EUR of cash is available.
+
+The account state remains unchanged.
+
+### 4. Attempt to sell 8 AAPL
+
+The transaction is rejected because only 5 shares are owned.
+
+The account state remains unchanged.
+
+### 5. Sell 3 AAPL at 120 EUR
+
+```text
+Sale proceeds: 360 EUR
+
+Cash: 860 EUR
+AAPL: 2
+```
 
 ---
 
-## Transaction Immutability
+## Validation
 
-Transactions form an append-only ledger.
+Transaction validation is handled by `StoreTransactionRequest`.
 
-Once created, transactions are never updated or deleted.
+Examples of invalid input include:
 
-There are intentionally no API endpoints for modifying or deleting transaction history.
+* missing transaction type;
+* unsupported transaction type;
+* zero or negative monetary amount;
+* zero or negative security price;
+* non-integer quantity;
+* zero quantity;
+* missing ticker for buy or sell;
+* security fields supplied for cash transactions;
+* amount supplied manually for buy or sell.
 
----
+Financial business-rule validation is handled separately by `TransactionService`.
 
-## Prices
+This includes:
 
-There is no external market-price provider.
+* insufficient cash;
+* insufficient security quantity.
 
-The price is supplied when a BUY or SELL transaction is created.
-
-The current price of a Holding is the latest BUY or SELL price entered for that ticker.
-
-For example:
-
-```text
-BUY 5 AAPL @ 100
-```
-
-creates:
-
-```text
-quantity = 5
-current_price = 100
-current_value = 500
-```
-
-If later:
-
-```text
-SELL 3 AAPL @ 120
-```
-
-the remaining Holding becomes:
-
-```text
-quantity = 2
-current_price = 120
-current_value = 240
-```
-
-No profit-and-loss calculation is performed.
+Separating request validation from domain rules keeps HTTP validation independent from financial business logic.
 
 ---
 
-# Balance Model
-
-Each account stores three balances:
+## Data Model
 
 ```text
-cash_balance
-holdings_balance
-total_balance
-```
-
-The relationship between them is:
-
-```text
-total_balance = cash_balance + holdings_balance
-```
-
-Each Holding has:
-
-```text
-current_value = quantity × current_price
-```
-
-The holdings balance represents the combined current value of all active Holdings.
-
----
-
-# Data Model
-
-```text
+User
+  |
+  | 1:1
+  v
 Client
-   │
-   │ 1 : 1
-   ▼
+  |
+  | 1:1
+  v
 Account
-   │
-   ├── 1 : N ──> Holding
-   │
-   └── 1 : N ──> Transaction
-                       │
-                       │ 0 : 1
-                       ▼
+  |
+  |---- 1:N ---- Holding
+  |
+  |---- 1:N ---- Transaction
+                     |
+                     | 0..1
+                     v
               SecurityTransactionDetail
 ```
 
 ### Client
 
-Identifies the investment client by name.
+Represents the financial client.
 
 ### Account
 
-Stores the client's currency and current financial state.
+Stores the current account state:
+
+* currency;
+* cash balance;
+* holdings balance;
+* total balance.
 
 ### Holding
 
-Stores the current quantity and latest known transaction price for an instrument.
+Stores the current position for one ticker:
+
+* ticker;
+* quantity;
+* current price;
+* current value.
+
+There can only be one holding row for the same ticker within an account.
 
 ### Transaction
 
-Stores the immutable history of deposits, withdrawals, buys, and sells.
+Represents the immutable financial transaction ledger.
+
+Transactions are never edited or deleted.
 
 ### SecurityTransactionDetail
 
-Stores ticker, quantity, and price information that applies only to BUY and SELL transactions.
-
-A more detailed database design is available in:
-
-```text
-docs/domain-database-design.md
-```
-
----
-
-# Why This Way?
-
-## Transaction Ledger and Current State
-
-The system separates:
-
-```text
-Current state
-+
-Historical ledger
-```
-
-`Account` and `Holding` models provide efficient access to the current state required by an account dashboard.
-
-`Transaction` and `SecurityTransactionDetail` preserve the complete immutable history of how that state was reached.
-
-This avoids rebuilding the full account state from the complete transaction history on every request while still preserving an audit trail.
-
----
-
-## Security Transaction Details
-
-Deposit and withdrawal movements only require an amount.
-
-BUY and SELL movements additionally require:
+Contains security-specific information for BUY and SELL transactions:
 
 * ticker;
 * quantity;
 * price.
 
-Instead of storing nullable security-specific fields directly on every Transaction, they are stored in `SecurityTransactionDetail`.
-
-This keeps the main transaction ledger focused on properties shared by every movement.
+Deposit and withdrawal transactions therefore do not require nullable security fields directly on the transaction record.
 
 ---
 
-## Financial Precision
+## Balance Rules
 
-Monetary values use fixed-precision database decimals rather than floating-point numbers.
+The account stores:
 
-Financial arithmetic in the service layer uses PHP BCMath functions such as:
+```text
+total_balance = cash_balance + holdings_balance
+```
+
+A holding stores:
+
+```text
+current_value = quantity × current_price
+```
+
+Because the assignment does not use an external pricing provider, the latest BUY or SELL price entered for a security is treated as its current price for account valuation purposes.
+
+The application does not calculate realized or unrealized profit and loss.
+
+---
+
+## Transaction Safety
+
+Every balance-changing operation is executed inside a database transaction.
+
+The relevant account row is retrieved using:
+
+```text
+lockForUpdate()
+```
+
+This prevents concurrent operations from independently reading the same balance and both modifying it based on stale state.
+
+If any part of the operation fails, the database transaction is rolled back.
+
+This means an invalid transaction cannot partially modify:
+
+* cash;
+* holdings;
+* account balances;
+* transaction history.
+
+---
+
+## Money Calculations
+
+Financial calculations do not use PHP floating-point arithmetic.
+
+BCMath is used for operations such as:
 
 ```text
 bcadd
@@ -505,105 +531,189 @@ bcmul
 bccomp
 ```
 
-This avoids floating-point rounding issues when working with money.
+with a scale of two decimal places.
+
+This avoids common floating-point precision problems when working with monetary values.
 
 ---
 
-## Atomic Operations
+## Account Isolation
 
-Deposit, withdrawal, BUY, and SELL operations may change multiple pieces of state.
+Financial operations are always executed against a specific account.
 
-For example, a BUY may:
+In the frontend demo, the account is resolved from the authenticated user:
 
-1. decrease cash;
-2. update a Holding;
-3. update account balances;
-4. create a Transaction;
-5. create a SecurityTransactionDetail.
+```text
+Authenticated User
+    -> Client
+        -> Account
+```
 
-These operations execute inside a database transaction.
+The frontend does not accept an arbitrary account ID from the user when creating transactions.
 
-If any part fails, the entire operation is rolled back and the account remains unchanged.
-
----
-
-## Concurrency
-
-Account rows are locked while financial movements are being processed.
-
-This prevents concurrent requests from reading the same outdated balance and accidentally allowing situations such as:
-
-* spending the same cash twice;
-* withdrawing more cash than available;
-* selling the same units twice.
+This prevents one authenticated user from selecting another user's account through a modified form request.
 
 ---
 
-## Validation vs Business Rules
+## Seed Data
 
-Input validation and business rules are deliberately separated.
-
-The Form Request layer validates input such as:
-
-* valid transaction type;
-* positive amounts;
-* positive prices;
-* integer quantities;
-* required BUY/SELL fields.
-
-The service layer enforces account-state rules such as:
-
-* sufficient cash;
-* sufficient holdings;
-* atomic balance updates.
-
-This keeps HTTP input concerns separate from financial business logic.
-
----
-
-# Seed Data
-
-Sample clients and transactions are provided through the database seeder.
-
-Run:
+Running:
 
 ```bash
 php artisan migrate:fresh --seed
 ```
 
-Example seeded scenario for Ana:
+creates sample clients, users, accounts, and transactions.
+
+Example seeded data includes:
+
+### Ana
+
+* currency: EUR
+* deposit: 1000
+* buy: 5 AAPL at 100
+* sell: 3 AAPL at 120
+
+Final example state:
 
 ```text
-Deposit €1000
-Buy 5 AAPL @ €100
-Sell 3 AAPL @ €120
+Cash balance: 860 EUR
+AAPL quantity: 2
+AAPL current price: 120 EUR
+AAPL current value: 240 EUR
+Total balance: 1100 EUR
 ```
 
-Result:
+### Mark
 
-```text
-Cash balance:     €860
-Holdings balance: €240
-Total balance:    €1100
-
-AAPL:
-quantity:         2
-current price:    €120
-current value:    €240
-```
+Includes a USD account and an example MSFT purchase.
 
 ---
 
-# Scope
+## Tests
 
-The project intentionally does not include:
+Run the automated test suite with:
 
-* frontend UI;
-* authentication;
+```bash
+php artisan test
+```
+
+The tests cover the main application rules, including:
+
+* deposits;
+* withdrawals;
+* insufficient cash;
+* purchases;
+* insufficient cash when buying;
+* sales;
+* over-selling;
+* full sale of a holding;
+* transaction validation;
+* clean API error responses;
+* unchanged state after rejected transactions;
+* account isolation;
+* frontend home-page redirect behavior.
+
+---
+
+## Why This Way?
+
+### Immutable Transaction Ledger
+
+Transactions represent financial events that occurred in the past.
+
+They are therefore append-only and are not exposed through update or delete endpoints.
+
+### Current State + Historical Ledger
+
+`Account` and `Holding` contain the current state required for fast reads.
+
+`Transaction` and `SecurityTransactionDetail` preserve the historical record.
+
+This avoids recalculating the entire account from all historical transactions every time the current state is requested.
+
+### Separate Security Details
+
+Security-specific data is stored separately because deposit and withdrawal transactions do not have:
+
+* ticker;
+* quantity;
+* price.
+
+This keeps the base transaction model small while still preserving complete BUY and SELL information.
+
+### Service Layer
+
+Financial logic is located in `TransactionService` rather than controllers.
+
+This allows the same business logic to be reused by:
+
+* REST API controllers;
+* Blade frontend controllers;
+* database seeders;
+* automated tests.
+
+### Request Validation vs Business Rules
+
+`StoreTransactionRequest` validates the structure and values of incoming data.
+
+`TransactionService` validates financial state-dependent rules such as available cash and owned quantity.
+
+### Authentication Separation
+
+`User` represents authentication identity.
+
+`Client` represents the financial domain entity.
+
+Keeping them separate avoids coupling authentication concerns directly to the investment account model.
+
+---
+
+## Project Scope
+
+The application currently includes both the required Laravel backend and an optional authenticated Blade frontend demo.
+
+The following features are intentionally outside the scope of the assignment:
+
+* user registration and account-management UI;
 * foreign-exchange conversion;
-* external security pricing;
+* external or real-time security pricing;
 * profit-and-loss calculations;
 * security master data;
-* transaction editing or deletion.
+* transaction editing;
+* transaction deletion.
 
-These features are outside the requirements of the assignment.
+Security tickers are represented only by their ticker labels, as required by the assignment.
+
+Transaction prices are entered manually at transaction time.
+
+---
+
+## Branches
+
+### `master`
+
+Contains the completed backend implementation required by the assignment.
+
+The backend-final version is also marked with:
+
+```text
+backend-final
+```
+
+### `feature/frontend-demo`
+
+Contains the backend plus the optional authenticated Blade frontend demo.
+
+The frontend is an additional demonstration and is not required for the core assignment.
+
+---
+
+## Additional Design Documentation
+
+Additional information about the domain and database design is available in:
+
+```text
+docs/domain-database-design.md
+```
+
