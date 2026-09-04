@@ -156,4 +156,89 @@ class TransactionService
         });
     }
 
+    public function sell(
+    Account $account,
+    string $ticker,
+    int $quantity,
+    string $price
+    ): Transaction {
+        return DB::transaction(function () use ($account, $ticker, $quantity, $price) {
+
+            $account = Account::query()
+                ->lockForUpdate()
+                ->findOrFail($account->id);
+
+            $holding = Holding::where('account_id', $account->id)
+                ->where('ticker', $ticker)
+                ->first();
+
+            if (!$holding || $holding->quantity < $quantity) {
+                throw new \DomainException('Insufficient holdings quantity.');
+            }
+
+            $proceeds = bcmul((string) $quantity, $price, 2);
+
+            $oldHoldingValue = $holding->current_value;
+
+            $remainingQuantity = $holding->quantity - $quantity;
+
+            if ($remainingQuantity === 0) {
+                $newHoldingValue = '0.00';
+                $holding->delete();
+            } else {
+                $holding->quantity = $remainingQuantity;
+                $holding->current_price = $price;
+                $holding->current_value = bcmul(
+                    (string) $remainingQuantity,
+                    $price,
+                    2
+                );
+
+                $holding->save();
+
+                $newHoldingValue = $holding->current_value;
+            }
+
+            $account->cash_balance = bcadd(
+                $account->cash_balance,
+                $proceeds,
+                2
+            );
+
+            $account->holdings_balance = bcadd(
+                bcsub(
+                    $account->holdings_balance,
+                    $oldHoldingValue,
+                    2
+                ),
+                $newHoldingValue,
+                2
+            );
+
+            $account->total_balance = bcadd(
+                $account->cash_balance,
+                $account->holdings_balance,
+                2
+            );
+
+            $account->save();
+
+            $transaction = Transaction::create([
+                'account_id' => $account->id,
+                'type' => TransactionType::Sell,
+                'amount' => $proceeds,
+            ]);
+
+            SecurityTransactionDetail::create([
+                'transaction_id' => $transaction->id,
+                'ticker' => $ticker,
+                'quantity' => $quantity,
+                'price' => $price,
+            ]);
+
+            return $transaction;
+        });
+    }
+
+    
 }
