@@ -304,4 +304,56 @@ class TransactionServiceTest extends TestCase
             'amount' => 600.00,
         ]);
     }
+
+    public function test_transactions_are_isolated_between_accounts(): void
+    {
+        $ana = Client::create(['name' => 'Ana']);
+
+        $anaAccount = $ana->account()->create([
+            'currency' => 'EUR',
+            'cash_balance' => '1000.00',
+            'holdings_balance' => '0.00',
+            'total_balance' => '1000.00',
+        ]);
+
+        $mark = Client::create(['name' => 'Mark']);
+
+        $markAccount = $mark->account()->create([
+            'currency' => 'USD',
+            'cash_balance' => '500.00',
+            'holdings_balance' => '0.00',
+            'total_balance' => '500.00',
+        ]);
+
+        $service = app(TransactionService::class);
+
+        $service->buy(
+            $anaAccount,
+            'AAPL',
+            5,
+            '100.00'
+        );
+
+        $anaAccount->refresh();
+        $markAccount->refresh();
+
+        $this->assertSame('500.00', $anaAccount->cash_balance);
+        $this->assertSame('500.00', $anaAccount->holdings_balance);
+
+        $this->assertSame('500.00', $markAccount->cash_balance);
+        $this->assertSame('0.00', $markAccount->holdings_balance);
+
+        $this->assertDatabaseHas('holdings', [
+            'account_id' => $anaAccount->id,
+            'ticker' => 'AAPL',
+            'quantity' => 5,
+        ]);
+
+        $this->assertDatabaseMissing('holdings', [
+            'account_id' => $markAccount->id,
+            'ticker' => 'AAPL',
+        ]);
+
+        $this->assertDatabaseCount('transactions', 1);
+    }
 }
