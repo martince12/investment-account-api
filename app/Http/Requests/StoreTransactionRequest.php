@@ -3,7 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Enums\TransactionType;
-use Illuminate\Contracts\Validation\ValidationRule;
+use Illuminate\Validation\Rule;
 use Illuminate\Foundation\Http\FormRequest;
 
 class StoreTransactionRequest extends FormRequest
